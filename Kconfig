@@ -1,0 +1,7 @@
+menu "hello_world_module"
+	config HELLO_WORLD
+		tristate "test module for learning purpose"
+		default m
+		help 
+		It is a test module that will be shown in kernel menuconfig gui and can be selected there the default state is loadable
+endmenu
