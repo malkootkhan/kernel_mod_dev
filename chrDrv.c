@@ -19,6 +19,7 @@ typedef enum
 
 };
 
+int test_point = 0;
 struct class *class;
 struct cdev dev_cdev;
 static dev_t dev_num;
@@ -30,7 +31,9 @@ static int __init chr_drv_init(void)
 {
 	int ret;
 
-	/*Step 01: Create class in the first step so that we can link the device this class*/
+	printk("test_point 1: Welcome to character drv\n");
+
+	/*Step 01: Create class in the first step so that we can link the device this class you can see class in /sys/class/ and within class you can see your device what you linked*/
 	class = class_create(CLASS_NAME);
 
 	/*Step 02: create or assign device number it can be done in two ways either static or dynamic we will dynamic alloc*/
@@ -53,5 +56,26 @@ static int __init chr_drv_init(void)
 
 }
 
-/*register the drv_init function here with kernel*/
+static void __exit chr_drv_exit(void)
+{
+	printk("test_point %d: Good bye", test_point);
+	/*Step 01: device destroy means removing the device special file /dev*/
+	device_destroy(class, dev_num);
+
+	/*Step 02: cdev_del makes the system forget about the character device*/
+	cdev_del(&dev_cdev);
+
+	/*Step 03: class_destroy and class_unregister will deregister and remove the class from the system*/
+	class_unregister(class);
+	class_destroy(class);
+
+	/*Step 04: this function will release the device number*/
+	unregister_chrdev_region(dev_num, DEV_COUNT);
+}
+
+
+
+/*register the functions here with kernel*/
 module_init(chr_drv_init);
+module_exit(chr_drv_exit);
+
