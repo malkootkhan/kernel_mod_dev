@@ -1,7 +1,7 @@
-menu "hello_world_module"
-	config HELLO_WORLD
+menu "basic_chr_drv"
+	config TEST_CHR_DRV
 		tristate "test module for learning purpose"
-		default m
+		default y
 		help 
 		It is a test module that will be shown in kernel menuconfig gui and can be selected there the default state is loadable
 endmenu

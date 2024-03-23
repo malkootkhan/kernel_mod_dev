@@ -1,1 +1,1 @@
-obj-$(CONFIG_HELLO_WORLD) := main.o
+obj-$(CONFIG_TEST_CHR_DRV) := chrDrv.o
