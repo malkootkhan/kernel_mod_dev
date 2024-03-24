@@ -1,3 +1,4 @@
+#include <linux/fscrypt.h>
 #include <linux/module.h>   // Required for all kernel modules
 #include <linux/init.h>     // Needed for the macros module_init and module_exit
 #include <linux/fs.h>       // For the character device operations
@@ -21,21 +22,26 @@
 #define DEFAULT_MINOR		(0)
 #define DEV_COUNT		(2)
 #define GET_DEV_NAME(x)		DEVICE_NAME "%d",x
-#define DEBUG
+//#define DEBUG
+
+#ifdef DEBUG
+	int test_point = 0;
+#endif
 
 typedef enum 
 {
 	SUCCESS,
 	FAILURE = 1
 
+}status_t;
+struct my_cdev
+{
+	dev_t dev_num;
+	struct class *class;
+	struct cdev dev_cdev[DEV_COUNT];
+	struct file_operations fop;
 };
-
-int test_point = 0;
-struct class *class;
-struct cdev dev_cdev[DEV_COUNT];
-dev_t dev_num;
-struct file_operations fop;
-
+struct my_cdev my_ch_dev;
 /*main function that is called by kernel*/
 /*the keywords: __init, __exit are the compiler attributes that tell the linker to put this symbol function name into .init.text section that is already known by the compiler when and why to free */
 static int __init chr_drv_init(void)
@@ -44,17 +50,17 @@ static int __init chr_drv_init(void)
 	int index;
 	dev_t curr_dev;
 	
-
+#ifdef DEBUG
 	printk("test_point %d: Welcome to character drv\n", ++test_point);
-
+#endif
 	/*Step 01: Create class in the first step so that we can link the device this class you can see class in /sys/class/ and within class you can see your device what you linked*/
-	class = class_create(CLASS_NAME);
+	my_ch_dev.class = class_create(CLASS_NAME);
 
 	/*Step 02: create or assign device number it can be done in two ways either static or dynamic we will dynamic alloc*/
-	ret = alloc_chrdev_region(&dev_num, DEFAULT_MINOR, DEV_COUNT, DEVICE_NAME);
+	ret = alloc_chrdev_region(&my_ch_dev.dev_num, DEFAULT_MINOR, DEV_COUNT, DEVICE_NAME);
 	if(ret < 0)
 	{
-		printk("test_point %d: device number couldn't be allocated\n", ++test_point);
+		printk("device number couldn't be allocated\n");
 		return FAILURE; 
 	}
 	for(index = 0; index < DEV_COUNT; index++)
@@ -64,21 +70,21 @@ static int __init chr_drv_init(void)
 #ifdef DEBUG
 		printk("test_point %d.%d: cdev_init function is following\n", ++test_point,index);
 #endif
-		cdev_init(&dev_cdev[index], &fop);
+		cdev_init(&my_ch_dev.dev_cdev[index], &my_ch_dev.fop);
 
-		curr_dev = MKDEV( MAJOR(dev_num), (MINOR(dev_num)+index) );
+		curr_dev = MKDEV( MAJOR(my_ch_dev.dev_num), (MINOR(my_ch_dev.dev_num)+index) );
 
 		/*Step 04: add the device to system*/
 #ifdef DEBUG
 		printk("test_point %d.%d: cdev_add function is following\n", ++test_point,index);
 #endif
-		cdev_add(&dev_cdev[index], curr_dev, DEV_COUNT);
+		cdev_add(&my_ch_dev.dev_cdev[index], curr_dev, DEV_COUNT);
 
 		/*Step 05: it will create a special file located in /dev direcory*/
 #ifdef DEBUG
 		printk("test_point %d.%d: device_create function is following\n", ++test_point,index);
 #endif
-		device_create(class, NULL, curr_dev, NULL, GET_DEV_NAME(index));
+		device_create(my_ch_dev.class, NULL, curr_dev, NULL, GET_DEV_NAME(index));
 	}
 	return SUCCESS;
 
@@ -88,27 +94,28 @@ static void __exit chr_drv_exit(void)
 {
 	int index;
 	dev_t curr_dev;
-
+#ifdef DEBUG
 	printk("test_point %d: Good bye", ++test_point);
+#endif
 
 	for(index = 0; index < DEV_COUNT; index++)
 	{
 
-		curr_dev = MKDEV ( MAJOR(dev_num), (MINOR(dev_num)+index) );
+		curr_dev = MKDEV ( MAJOR(my_ch_dev.dev_num), (MINOR(my_ch_dev.dev_num)+index) );
 
 		/*Step 01: device destroy means removing the device special file /dev*/
-		device_destroy(class, curr_dev);
+		device_destroy(my_ch_dev.class, curr_dev);
 
 		/*Step 02: cdev_del makes the system forget about the character device*/
-		cdev_del(&dev_cdev[index]);
+		cdev_del(&my_ch_dev.dev_cdev[index]);
 
 		/*Step 04: this function will release the device number*/
 		unregister_chrdev_region(curr_dev, DEV_COUNT);
 	}
 	
 	/*Step 03: class_destroy and class_unregister will deregister and remove the class from the system*/
-	class_unregister(class);
-	class_destroy(class);
+	class_unregister(my_ch_dev.class);
+	class_destroy(my_ch_dev.class);
 }
 
 
