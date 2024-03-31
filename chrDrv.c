@@ -28,6 +28,11 @@
 	int test_point = 0;
 #endif
 
+int my_file_open(struct inode *iInstance, struct file *fInstance);
+int my_file_release(struct inode *iInstance, struct file *fInstance); 
+ssize_t my_file_read(struct file *src, char __user *dest, size_t size, loff_t *ptr);
+ssize_t my_file_write(struct file *dest, const char __user *src, size_t size, loff_t *ptr);
+
 typedef enum 
 {
 	SUCCESS,
@@ -41,7 +46,38 @@ struct my_cdev
 	struct cdev dev_cdev[DEV_COUNT];
 	struct file_operations fop;
 };
-struct my_cdev my_ch_dev;
+struct my_cdev my_ch_dev = 
+{
+	.dev_num = 0,
+	.fop={
+		.owner = THIS_MODULE,
+		.open = my_file_open,
+		.release = my_file_release,
+		.read = my_file_read,
+		.write = my_file_write,
+	},
+};
+
+int my_file_open(struct inode *iInstance, struct file *fInstance)
+{
+	printk("File open system call is invoked on user side!\n");
+	return 0;
+}
+int my_file_release(struct inode *iInstance, struct file *fInstance)
+{
+	printk("file release system call is invoked on user space\n");
+	return  0;
+}
+ssize_t my_file_read(struct file *src, char __user *dest, size_t size, loff_t *ptr)
+{
+	printk("file read system call invoked on user space\n");
+	return 0;
+}
+ssize_t my_file_write(struct file *dest, const char __user *src, size_t size, loff_t *ptr)
+{
+	printk("file write system call invoked on user space\n");
+	return size;
+}
 /*main function that is called by kernel*/
 /*the keywords: __init, __exit are the compiler attributes that tell the linker to put this symbol function name into .init.text section that is already known by the compiler when and why to free */
 static int __init chr_drv_init(void)
